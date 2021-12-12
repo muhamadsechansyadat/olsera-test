@@ -8,13 +8,12 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Validator;
 
 use App\Models\Item;
-use App\Models\PajakItem;
 
 class ItemController extends Controller
 {
     public function index()
     {
-        $data = Item::select(['nama'])->get();
+        $data = Item::get();
         return response()->json([
             'data' => $data,
         ]);
@@ -22,7 +21,7 @@ class ItemController extends Controller
 
     public function show($id)
     {
-        $data = Item::where('id', $id)->select(['nama'])->first();
+        $data = Item::find($id);
         return response()->json([
             'data' => $data,
         ]);
@@ -36,31 +35,22 @@ class ItemController extends Controller
 
         if ((is_array($request->id_pajak) || is_object($request->id_pajak)) && (is_countable($request->id_pajak) && count($request->id_pajak) > 1)) {
             try {
+                foreach ($request->id_pajak as $val) {
+                    $pajak[] = $val;
+                }
+
                 $data = Item::create([
                     'nama' => $request->nama,
                 ]);
 
-                foreach ($request->id_pajak as $pajak) {
-                    $newArr[] = [
-                        'id_pajak' => $pajak,
-                        'id_item' => $data->id,
-                    ];
-                }
+                $newData = Item::find($data->id);
+                $newData->pajaks()->attach($pajak);
 
-                $pajakItem = PajakItem::insert($newArr);
-
-                if ($data && $pajakItem) {
-                    return response()->json([
-                        'result' => 'success',
-                        'msg' => 'Success Add Data',
-                        'data' => $data,
-                    ], 201);
-                } else {
-                    return response()->json([
-                        'result' => 'error',
-                        'msg' => 'Something when wrong',
-                    ], 501);
-                }
+                return response()->json([
+                    'result' => 'success',
+                    'msg' => 'Success Add Data',
+                    'data' => $newData,
+                ], 201);
             } catch (QueryException $ex) {
                 return response()->json([
                     'result' => 'error',
@@ -83,34 +73,24 @@ class ItemController extends Controller
 
         if ((is_array($request->id_pajak) || is_object($request->id_pajak)) && (is_countable($request->id_pajak) && count($request->id_pajak) > 1)) {
             try {
+                foreach ($request->id_pajak as $val) {
+                    $pajak[] = $val;
+                }
+
                 $data = Item::where('id', $id)->update([
                     'nama' => $request->nama,
                 ]);
+
                 $dataUpdated = Item::where('id', $id)->select(['id', 'nama',])->first();
 
-                $delPajakItem = PajakItem::where('id_item', $id)->delete();
+                $newData = Item::find($id);
+                $newData->pajaks()->sync($pajak);
 
-                foreach ($request->id_pajak as $pajak) {
-                    $newArr[] = [
-                        'id_pajak' => $pajak,
-                        'id_item' => $id,
-                    ];
-                }
-
-                $pajakItem = PajakItem::insert($newArr);
-
-                if ($data && $pajakItem) {
-                    return response()->json([
-                        'result' => 'success',
-                        'msg' => 'Success Add Data',
-                        'data' => $dataUpdated,
-                    ], 201);
-                } else {
-                    return response()->json([
-                        'result' => 'error',
-                        'msg' => 'Something when wrong',
-                    ], 501);
-                }
+                return response()->json([
+                    'result' => 'success',
+                    'msg' => 'Success Update Data',
+                    'data' => $newData,
+                ], 200);
             } catch (QueryException $ex) {
                 return response()->json([
                     'result' => 'error',
@@ -127,28 +107,14 @@ class ItemController extends Controller
 
     public function delete($id)
     {
-        $dataItem = Item::where('id', $id)->first();
-        $dataPajakItem = PajakItem::where('id_item', $id)->first();
-
         try {
-            if ($dataItem != NULL && ($dataPajakItem != NULL || $dataPajakItem != NULL)) {
-                if ($dataItem->delete()) {
-                    return response()->json([
-                        'result' => 'success',
-                        'msg' => 'Success Delete Data',
-                    ], 200);
-                } else {
-                    return response()->json([
-                        'result' => 'error',
-                        'msg' => 'Something when wrong',
-                    ], 501);
-                }
-            } else {
-                return response()->json([
-                    'result' => 'error',
-                    'msg' => 'Something when wrong',
-                ], 501);
-            }
+            $data = Item::find($id);
+            $data->delete($id);
+
+            return response()->json([
+                'result' => 'success',
+                'msg' => 'Success Delete Data',
+            ], 200);
         } catch (QueryException $ex) {
             return response()->json([
                 'result' => 'error',
