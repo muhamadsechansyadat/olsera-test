@@ -10,16 +10,15 @@ class ListDataItemController extends Controller
 {
     public function listDataItem()
     {
-        $data = DB::select("SELECT JSON_OBJECT('id', item.id,'nama', item.nama, 'pajak',
-                        (SELECT CAST(CONCAT('[',
-                        GROUP_CONCAT(
-                        JSON_OBJECT('id', pajak.id , 'name', pajak.nama, 'rate', CONCAT(TRIM(pajak.rate)+0,'%'))),
-                        ']') AS JSON)
-                        FROM pajak, pajak_item
-                        WHERE pajak.id = pajak_item.id_pajak AND item.id = pajak_item.id_item 
-                        )
-            ) AS json_data
-        FROM item");
+        $data = DB::table("item")
+            ->select(DB::raw("JSON_OBJECT('id', item.id,'nama', item.nama, 'pajak',(SELECT CAST(CONCAT('[',
+                            GROUP_CONCAT(
+                            JSON_OBJECT('id', pajak.id , 'name', pajak.nama, 'rate', CONCAT(TRIM(pajak.rate)+0,'%'))),
+                            ']') AS JSON)
+                            FROM pajak, pajak_item
+                            WHERE pajak.id = pajak_item.pajak_id AND item.id = pajak_item.item_id 
+                            ))AS json_data"))
+            ->get();
         $arr = [];
         foreach ($data as $key => $val) {
             $jsonData = json_decode($val->json_data, true);
